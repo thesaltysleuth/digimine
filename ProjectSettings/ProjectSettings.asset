@@ -830,7 +830,7 @@ PlayerSettings:
   webWasm2023: 1
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Standalone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
+    Standalone: APP_UI_EDITOR_ONLY
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
@@ -930,11 +930,11 @@ PlayerSettings:
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: cd6dbb51-a84b-4e91-ae9b-a2ed0421cf45
+  cloudProjectId: b17a92d2-c760-4d76-9cc4-5a7d76cba797
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: digimine
-  organizationId: thesaltysleuth
+  projectName: digimine (1)
+  organizationId: sg1ooxbss
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

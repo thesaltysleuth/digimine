@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "unity-mcp-gateway": {
+      "command": "C:\\Users\\sg1oo\\Documents\\GitHub\\digimine\\Library\\PackageCache\\com.unity.ai.assistant@c0127625258e\\RelayApp~\\relay_win.exe",
+      "args": [
+        "--mcp",
+        "--log-dir",
+        "C:\\Users\\sg1oo\\Documents\\GitHub\\digimine\\Logs"
+      ],
+      "env": {
+        "UNITY_ACP_SESSION_TOKEN": "4b9f04c4b90096e76a031d7e9ef3e1fcec489bfcc500816c8cc863f78422173e",
+        "UNITY_INSTANCE_ID": "43088"
+      }
+    }
+  }
+}

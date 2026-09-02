@@ -8,6 +8,9 @@ namespace MineVent.Solvers
     {
         public List<string> Validate(MineNetwork network, float tolerance = 0.0001f)
         {
+            if (network == null)
+                throw new ArgumentNullException(nameof(network));
+
             var errors = new List<string>();
 
             foreach (var node in network.Nodes.Values)

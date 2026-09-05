@@ -67,5 +67,9 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "digimine.slnx"
+    "dotnet.defaultSolution": "digimine.slnx",
+    "csharp-dev-tools.solutionViewer.selectedWorkspaceSolutions": [
+        "digimine.sln",
+        "digimine.slnx"
+    ]
 }

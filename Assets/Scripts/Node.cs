@@ -7,8 +7,17 @@ public class Node : MonoBehaviour
     public float pressure = -1f; // Pa (-1 = Undefined/To Solve)
     public float ch4 = -1f;      // % Concentration (-1 = Undefined/To Solve)
 
+    [Header("Gas Generation")]
+    public float methaneGenerationRate = 0f; // m³/s (Methane gas emission rate at this node)
+
+    [Header("Calculated Results")]
+    public float totalInflow = 0f;   // m³/s (Sum of incoming edge flows)
+    public float totalOutflow = 0f;  // m³/s (Sum of outgoing edge flows)
+    public float airflow = 0f;       // m³/s (Junction throughput = Max(In, Out))
+
     [Header("Boundary Flags")]
     public bool isFixedPressure = false;
+    public bool isFixedCh4 = false;
 
     [Header("UI Reference")]
     public TextMeshPro labelText; // Drag child TextMeshPro component here
@@ -28,19 +37,15 @@ public class Node : MonoBehaviour
 
         // Formatted RichText output to match your UI mockup
         string displayPressure = pressure >= 0 ? $"{pressure:F1} Pa" : "Calculating...";
+        string displayAirflow = $"{airflow:F1} m³/s";
         string displayCh4 = ch4 >= 0 ? $"{ch4:F2}% CH4" : "Calculating...";
 
         labelText.text = $"<color=#00E5FF>{gameObject.name}</color>\n" +
-                         $"<size=75%>{displayPressure} | <color={ch4ColorHex}>{displayCh4}</color></size>";
+                         $"<size=75%>{displayPressure} | {displayAirflow} | <color={ch4ColorHex}>{displayCh4}</color></size>";
     }
 
     private void OnValidate()
     {
-        if (pressure >= 0)
-        {
-            isFixedPressure = true;
-        }
-
         // Auto-find child TextMeshPro component if not assigned
         if (labelText == null)
         {

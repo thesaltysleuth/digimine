@@ -9,8 +9,8 @@ public class Edge
     public Node nodeB;
     public float resistance = 1.0f;
 
-    [HideInInspector] public float calculatedFlowRate = 0f;
-    [HideInInspector] public FlowDir flowDirection = FlowDir.Static;
+    public float calculatedFlowRate = 0f;
+    public FlowDir flowDirection = FlowDir.Static;
     [HideInInspector] public LineRenderer lineRenderer;
 
     public Edge(Node a, Node b)

@@ -10010,13 +10010,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0026309942, y: 0.8591686, z: -0.5112197, w: -0.021839399}
-  m_LocalPosition: {x: 975, y: 293, z: 915}
+  m_LocalRotation: {x: 0.15371008, y: 0.87245125, z: -0.37831345, w: 0.26847908}
+  m_LocalPosition: {x: 1293, y: 363, z: 707}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 61.442, y: 184.826, z: -266.771}
+  m_LocalEulerAnglesHint: {x: 47.958, y: 148.272, z: -354.424}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10074,17 +10074,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainGameObjectCamera
   keyboardMoveSpeed: 15
-  shiftSpeedMultiplier: 2
+  shiftSpeedMultiplier: 100
   panSpeed: 0.5
   rotateSpeed: 0.22
   minPitch: 10
   maxPitch: 85
   zoomSpeed: 15
-  minZoomDist: 5
-  maxZoomDist: 400
+  minZoomDist: 1
+  maxZoomDist: 500
   minGroundHeight: 1.5
-  focusDuration: 0.5
   doubleClickTimeThreshold: 0.3
+  focusDuration: 0.5
+  defaultFocusDistance: 60
+  maxSnapRadius: 100
 --- !u!1 &339112325
 GameObject:
   m_ObjectHideFlags: 0

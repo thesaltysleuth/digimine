@@ -9969,7 +9969,7 @@ Camera:
   m_ShutterSpeed: 0.005
   m_Aperture: 16
   m_FocusDistance: 10
-  m_FocalLength: 50
+  m_FocalLength: 13.804421
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
@@ -9983,8 +9983,8 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
-  field of view: 60
+  far clip plane: 5000
+  field of view: 70
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -10070,9 +10070,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef98a7c3224c6704d976c8bd33dfc59e, type: 3}
+  m_Script: {fileID: 11500000, guid: aa5f7ab127e3abc4897cd06a889d41d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainGameObjectCamera
+  keyboardMoveSpeed: 15
+  shiftSpeedMultiplier: 2
+  panSpeed: 0.5
+  rotateSpeed: 0.22
+  minPitch: 10
+  maxPitch: 85
+  zoomSpeed: 15
+  minZoomDist: 5
+  maxZoomDist: 400
+  minGroundHeight: 1.5
+  focusDuration: 0.5
+  doubleClickTimeThreshold: 0.3
 --- !u!1 &339112325
 GameObject:
   m_ObjectHideFlags: 0

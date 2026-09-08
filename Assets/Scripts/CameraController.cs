@@ -65,6 +65,10 @@ public class CameraController : MonoBehaviour
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             return;
 
+        // Prevent selection and camera focus while placing a leak
+        if (LeakPlacementManager.Instance != null && LeakPlacementManager.Instance.isPlacing)
+            return;
+
         HandleSelectionAndFocus();
 
         // Interrupt focus if manual navigation controls are touched

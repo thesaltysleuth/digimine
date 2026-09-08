@@ -23,6 +23,10 @@ public class GraphManager : MonoBehaviour
     private void Awake()
     {
         solver = GetComponent<Solver>();
+        if (GetComponent<LeakPlacementManager>() == null)
+        {
+            gameObject.AddComponent<LeakPlacementManager>();
+        }
     }
 
     private void Start()

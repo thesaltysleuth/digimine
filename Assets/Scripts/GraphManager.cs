@@ -19,6 +19,7 @@ public class GraphManager : MonoBehaviour
     public List<Edge> edges = new List<Edge>();
 
     private Solver solver;
+    private Material staticBlockedMaterial;
 
     private void Awake()
     {
@@ -26,6 +27,10 @@ public class GraphManager : MonoBehaviour
         if (GetComponent<LeakPlacementManager>() == null)
         {
             gameObject.AddComponent<LeakPlacementManager>();
+        }
+        if (GetComponent<DebrisPlacementManager>() == null)
+        {
+            gameObject.AddComponent<DebrisPlacementManager>();
         }
     }
 
@@ -60,61 +65,179 @@ public class GraphManager : MonoBehaviour
         SetupEdgeRenderers();
     }
 
+    private void EnsureStaticBlockedMaterial()
+    {
+        if (staticBlockedMaterial == null)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null) shader = Shader.Find("Unlit/Transparent");
+            staticBlockedMaterial = new Material(shader);
+            staticBlockedMaterial.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+            if (staticBlockedMaterial.HasProperty("_BaseColor"))
+            {
+                staticBlockedMaterial.SetColor("_BaseColor", staticBlockedMaterial.color);
+            }
+        }
+    }
+
     private void SetupEdgeRenderers()
     {
+        EnsureStaticBlockedMaterial();
+
         foreach (var edge in edges)
         {
             if (edge.nodeA == null || edge.nodeB == null) continue;
 
-            if (edge.lineRenderer == null)
+            if (!edge.isBlocked)
             {
-                GameObject edgeObj = new GameObject($"Edge_{edge.nodeA.name}_{edge.nodeB.name}");
-                edgeObj.transform.SetParent(transform);
-                edge.lineRenderer = edgeObj.AddComponent<LineRenderer>();
+                if (edge.downstreamLineRenderer != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(edge.downstreamLineRenderer.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(edge.downstreamLineRenderer.gameObject);
+                    }
+                    edge.downstreamLineRenderer = null;
+                }
+
+                if (edge.lineRenderer == null)
+                {
+                    GameObject edgeObj = new GameObject($"Edge_{edge.nodeA.name}_{edge.nodeB.name}");
+                    edgeObj.transform.SetParent(transform);
+                    edge.lineRenderer = edgeObj.AddComponent<LineRenderer>();
+                }
+
+                LineRenderer lr = edge.lineRenderer;
+                lr.enabled = showEdges;
+                lr.startWidth = lineThickness;
+                lr.endWidth = lineThickness;
+                lr.positionCount = 2;
+
+                // Set endpoints
+                lr.SetPosition(0, edge.nodeA.transform.position);
+                lr.SetPosition(1, edge.nodeB.transform.position);
+
+                bool hasFlow = edge.calculatedFlowRate > 0.0001f && edge.flowDirection != FlowDir.Static;
+
+                if (hasFlow)
+                {
+                    // Determine target texture based on methane levels
+                    float maxCh4 = Mathf.Max(edge.nodeA.ch4, edge.nodeB.ch4);
+                    Texture targetTex = greenArrow;
+                    if (maxCh4 > 1.25f) targetTex = redArrow;
+                    else if (maxCh4 >= 0.75f) targetTex = yellowArrow;
+
+                    if (lr.sharedMaterial == null || lr.sharedMaterial == staticBlockedMaterial)
+                    {
+                        lr.sharedMaterial = new Material(Shader.Find("Unlit/Transparent"));
+                    }
+
+                    lr.sharedMaterial.mainTexture = targetTex;
+
+                    // Scale UV tiling based on length and master spacing
+                    float dist = Vector3.Distance(edge.nodeA.transform.position, edge.nodeB.transform.position);
+                    float tilingX = dist / Mathf.Max(0.1f, arrowSpacing);
+
+                    // Flip UV scale visually if direction flows from B to A
+                    if (edge.flowDirection == FlowDir.B_To_A)
+                    {
+                        tilingX *= -1f;
+                    }
+
+                    lr.sharedMaterial.mainTextureScale = new Vector2(tilingX, 1);
+                }
+                else
+                {
+                    // 0 airflow: hide arrows, show static grey line
+                    lr.sharedMaterial = staticBlockedMaterial;
+                }
             }
-
-            LineRenderer lr = edge.lineRenderer;
-            lr.enabled = showEdges;
-            lr.startWidth = lineThickness;
-            lr.endWidth = lineThickness;
-            lr.positionCount = 2;
-
-            // Set endpoints
-            lr.SetPosition(0, edge.nodeA.transform.position);
-            lr.SetPosition(1, edge.nodeB.transform.position);
-
-            // Determine target texture based on methane levels
-            float maxCh4 = Mathf.Max(edge.nodeA.ch4, edge.nodeB.ch4);
-            Texture targetTex = greenArrow;
-            if (maxCh4 > 1.25f) targetTex = redArrow;
-            else if (maxCh4 >= 0.75f) targetTex = yellowArrow;
-
-            if (lr.sharedMaterial == null)
+            else
             {
-                lr.material = new Material(Shader.Find("Unlit/Transparent"));
+                // Determine upstream node and downstream node based on pressure delta
+                Node upstreamNode = (edge.nodeA.pressure >= edge.nodeB.pressure) ? edge.nodeA : edge.nodeB;
+                Node downstreamNode = (upstreamNode == edge.nodeA) ? edge.nodeB : edge.nodeA;
+
+                // Upstream LineRenderer (shows arrows up to debris position ONLY if there's airflow)
+                if (edge.lineRenderer == null)
+                {
+                    GameObject edgeObj = new GameObject($"Edge_{edge.nodeA.name}_{edge.nodeB.name}");
+                    edgeObj.transform.SetParent(transform);
+                    edge.lineRenderer = edgeObj.AddComponent<LineRenderer>();
+                }
+
+                LineRenderer upstreamLr = edge.lineRenderer;
+                upstreamLr.enabled = showEdges;
+                upstreamLr.startWidth = lineThickness;
+                upstreamLr.endWidth = lineThickness;
+                upstreamLr.positionCount = 2;
+                upstreamLr.SetPosition(0, upstreamNode.transform.position);
+                upstreamLr.SetPosition(1, edge.debrisWorldPosition);
+
+                bool hasUpstreamFlow = edge.calculatedFlowRate > 0.0001f && edge.flowDirection != FlowDir.Static;
+
+                if (hasUpstreamFlow)
+                {
+                    float maxCh4 = Mathf.Max(edge.nodeA.ch4, edge.nodeB.ch4);
+                    Texture targetTex = greenArrow;
+                    if (maxCh4 > 1.25f) targetTex = redArrow;
+                    else if (maxCh4 >= 0.75f) targetTex = yellowArrow;
+
+                    if (upstreamLr.sharedMaterial == null || upstreamLr.sharedMaterial == staticBlockedMaterial)
+                    {
+                        upstreamLr.sharedMaterial = new Material(Shader.Find("Unlit/Transparent"));
+                    }
+
+                    upstreamLr.sharedMaterial.mainTexture = targetTex;
+
+                    float upstreamDist = Vector3.Distance(upstreamNode.transform.position, edge.debrisWorldPosition);
+                    float upstreamTiling = upstreamDist / Mathf.Max(0.1f, arrowSpacing);
+
+                    if (upstreamNode == edge.nodeB)
+                    {
+                        upstreamTiling *= -1f;
+                    }
+
+                    upstreamLr.sharedMaterial.mainTextureScale = new Vector2(upstreamTiling, 1);
+                }
+                else
+                {
+                    upstreamLr.sharedMaterial = staticBlockedMaterial;
+                }
+
+                // Downstream LineRenderer (static line with NO arrows)
+                if (edge.downstreamLineRenderer == null)
+                {
+                    GameObject downstreamObj = new GameObject($"Edge_{edge.nodeA.name}_{edge.nodeB.name}_Downstream");
+                    downstreamObj.transform.SetParent(transform);
+                    edge.downstreamLineRenderer = downstreamObj.AddComponent<LineRenderer>();
+                }
+
+                LineRenderer downstreamLr = edge.downstreamLineRenderer;
+                downstreamLr.enabled = showEdges;
+                downstreamLr.startWidth = lineThickness;
+                downstreamLr.endWidth = lineThickness;
+                downstreamLr.positionCount = 2;
+                downstreamLr.SetPosition(0, edge.debrisWorldPosition);
+                downstreamLr.SetPosition(1, downstreamNode.transform.position);
+
+                downstreamLr.sharedMaterial = staticBlockedMaterial;
             }
-
-            lr.material.mainTexture = targetTex;
-
-            // Scale UV tiling based on length and master spacing
-            float dist = Vector3.Distance(edge.nodeA.transform.position, edge.nodeB.transform.position);
-            float tilingX = dist / Mathf.Max(0.1f, arrowSpacing);
-
-            // Flip UV scale visually if direction flows from B to A
-            if (edge.flowDirection == FlowDir.B_To_A)
-            {
-                tilingX *= -1f;
-            }
-
-            lr.material.mainTextureScale = new Vector2(tilingX, 1);
         }
     }
 
     private void AnimateArrows()
     {
+        if (!Application.isPlaying) return;
+
         foreach (var edge in edges)
         {
-            if (edge.lineRenderer == null || !edge.lineRenderer.enabled) continue;
+            if (edge.lineRenderer == null || !edge.lineRenderer.enabled || edge.lineRenderer.sharedMaterial == null) continue;
+            if (edge.lineRenderer.sharedMaterial == staticBlockedMaterial) continue;
 
             // Speed driven by flow rate
             float speed = edge.calculatedFlowRate * 0.1f;
@@ -124,10 +247,9 @@ public class GraphManager : MonoBehaviour
                 speed = 0f;
             }
 
-            Vector2 currentOffset = edge.lineRenderer.material.mainTextureOffset;
-            // Always move offset in one direction relative to the flipped UV mapping
+            Vector2 currentOffset = edge.lineRenderer.sharedMaterial.mainTextureOffset;
             currentOffset.x -= speed * Time.deltaTime;
-            edge.lineRenderer.material.mainTextureOffset = currentOffset;
+            edge.lineRenderer.sharedMaterial.mainTextureOffset = currentOffset;
         }
     }
 
@@ -141,7 +263,7 @@ public class GraphManager : MonoBehaviour
         {
             foreach (var edge in edges)
             {
-                if (edge.lineRenderer != null)
+                if (edge.lineRenderer != null && edge.lineRenderer.sharedMaterial != null && edge.lineRenderer.sharedMaterial != staticBlockedMaterial)
                 {
                     edge.lineRenderer.enabled = showEdges;
                     edge.lineRenderer.startWidth = lineThickness;

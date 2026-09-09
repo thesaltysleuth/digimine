@@ -42,7 +42,7 @@ public class Solver : MonoBehaviour
 
                 foreach (var edge in edges)
                 {
-                    if (edge == null || edge.nodeA == null || edge.nodeB == null) continue;
+                    if (edge == null || edge.isBlocked || edge.nodeA == null || edge.nodeB == null) continue;
                     if (edge.nodeA != node && edge.nodeB != node) continue;
 
                     Node neighbor = edge.GetOtherNode(node);
@@ -68,6 +68,13 @@ public class Solver : MonoBehaviour
         foreach (var edge in edges)
         {
             if (edge.nodeA == null || edge.nodeB == null) continue;
+
+            if (edge.isBlocked)
+            {
+                edge.calculatedFlowRate = 0f;
+                edge.flowDirection = FlowDir.Static;
+                continue;
+            }
 
             float deltaP = edge.nodeA.pressure - edge.nodeB.pressure;
             edge.calculatedFlowRate = Mathf.Abs(deltaP) / Mathf.Max(0.0001f, edge.resistance);

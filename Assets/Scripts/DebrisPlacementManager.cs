@@ -3,50 +3,40 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class LeakPlacementManager : MonoBehaviour
+public class DebrisPlacementManager : MonoBehaviour
 {
-    public static LeakPlacementManager Instance { get; private set; }
+    public static DebrisPlacementManager Instance { get; private set; }
 
-    [Header("Methane Leak Settings")]
-    [Tooltip("Assign your Methane Leak Prefab here (with or without MethaneLeak component attached).")]
-    public GameObject leakPrefab;
-    public float defaultEmissionRate = 0.5f; // m³/s
+    [Header("Debris Settings")]
 
-    [Header("Rotation Settings")]
-    [Tooltip("Rotation offset applied when spawning the leak. Default (-90, 0, 0) points local Z straight UP into world Y.")]
-    public Vector3 placementRotationEuler = new Vector3(-90f, 0f, 0f);
+    [Tooltip("Assign your Debris Prefab here (with or without Debris component attached).")]
+    public GameObject debrisPrefab;
 
     [Header("Placement State & Snapping")]
     public bool isPlacing = false;
-    [Tooltip("Maximum ground/world distance to snap to a node or edge line.")]
+    [Tooltip("Maximum ground/world distance to snap to an edge line.")]
     public float maxSnapDistance = 25f;
 
     [Header("Invalid Cursor Settings")]
-    [Tooltip("Texture2D for invalid placement cursor. Drag prohibition image here (auto-found from Assets/images/prohibition.png if unassigned).")]
+    [Tooltip("Texture2D for invalid placement cursor.")]
     public Texture2D invalidCursorTexture;
-    [Tooltip("Cursor hotspot offset in pixels (usually center of cursor icon).")]
     public Vector2 cursorHotspot = new Vector2(16f, 16f);
 
     [Header("Indicator Sizing & Tuning")]
-    [Tooltip("Diameter of the yellow snap indicator sphere (in world units). Adjust live in Inspector!")]
     public float indicatorRadius = 4.0f;
-
-    [Tooltip("Vertical height offset above ground/pipe surface.")]
     public float verticalOffset = 0.5f;
-
-    [Tooltip("Render yellow snap indicator on top of scene geometry (x-ray / no depth occlusion).")]
     public bool renderAlwaysOnTop = true;
 
     [Header("Visual Colors")]
-    public Color validSnapColor = new Color(1f, 0.85f, 0.1f, 0.65f); // Yellow transparent sphere
+    public Color validSnapColor = new Color(1f, 0.6f, 0.1f, 0.65f); // Orange transparent sphere
 
     private GameObject previewObject;
     private GameObject snapIndicator;
     private GraphManager graphManager;
 
-    // Gizmo state cache
+    // Snapping state
     private Vector3 currentSnappedPos;
-    private Vector3 currentRawHitPos;
+    private Edge currentTargetEdge;
     private bool currentPlacementValid;
 
     private void Awake()
@@ -59,34 +49,23 @@ public class LeakPlacementManager : MonoBehaviour
     {
         graphManager = FindFirstObjectByType<GraphManager>();
 
+        AutoFindDebrisPrefab();
         AutoFindProhibitionTexture();
-
-        // Auto-find and bind UI button named "leak" if not manually wired
-        GameObject leakButtonObj = GameObject.Find("leak");
-        if (leakButtonObj == null) leakButtonObj = GameObject.Find("Leak");
-
-        if (leakButtonObj != null && leakButtonObj.GetComponent<RectTransform>() != null)
-        {
-            Button btn = leakButtonObj.GetComponent<Button>();
-            if (btn == null)
-            {
-                btn = leakButtonObj.AddComponent<Button>();
-            }
-
-            Graphic graphic = leakButtonObj.GetComponent<Graphic>();
-            if (graphic != null)
-            {
-                graphic.raycastTarget = true;
-            }
-
-            btn.onClick.RemoveListener(TogglePlacementMode);
-            btn.onClick.AddListener(TogglePlacementMode);
-            Debug.Log("[LeakPlacementManager] Successfully bound to UI Button: " + leakButtonObj.name);
-        }
+        BindUIButton();
     }
 
-    private int lastToggleFrame = -1;
-    private int activatedFrame = -1;
+    private void AutoFindDebrisPrefab()
+    {
+        if (debrisPrefab != null) return;
+
+#if UNITY_EDITOR
+        debrisPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/objects/debris.prefab");
+        if (debrisPrefab == null)
+        {
+            debrisPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/JC_StylizedRocks_Lite/Prefabs/SM_Rocks_01.prefab");
+        }
+#endif
+    }
 
     private void AutoFindProhibitionTexture()
     {
@@ -108,10 +87,37 @@ public class LeakPlacementManager : MonoBehaviour
                 }
             }
         }
+    }
 
-        if (invalidCursorTexture != null)
+    private int lastToggleFrame = -1;
+    private int activatedFrame = -1;
+
+    private void BindUIButton()
+    {
+        string[] possibleNames = { "debris", "Debris", "debrisButton", "DebrisButton", "debris_button", "Debris_Button" };
+        GameObject debrisButtonObj = null;
+
+        foreach (var name in possibleNames)
         {
-            Debug.Log("[LeakPlacementManager] Successfully loaded invalid cursor texture: " + invalidCursorTexture.name);
+            GameObject found = GameObject.Find(name);
+            if (found != null && found.GetComponent<RectTransform>() != null)
+            {
+                debrisButtonObj = found;
+                break;
+            }
+        }
+
+        if (debrisButtonObj != null)
+        {
+            Button btn = debrisButtonObj.GetComponent<Button>();
+            if (btn == null) btn = debrisButtonObj.AddComponent<Button>();
+
+            Graphic graphic = debrisButtonObj.GetComponent<Graphic>();
+            if (graphic != null) graphic.raycastTarget = true;
+
+            btn.onClick.RemoveListener(TogglePlacementMode);
+            btn.onClick.AddListener(TogglePlacementMode);
+            Debug.Log("[DebrisPlacementManager] Successfully bound to UI Button: " + debrisButtonObj.name);
         }
     }
 
@@ -133,20 +139,20 @@ public class LeakPlacementManager : MonoBehaviour
         {
             activatedFrame = Time.frameCount;
 
-            // If debris placement is active, deactivate it
-            if (DebrisPlacementManager.Instance != null && DebrisPlacementManager.Instance.isPlacing)
+            // If leak placement is active, deactivate it
+            if (LeakPlacementManager.Instance != null && LeakPlacementManager.Instance.isPlacing)
             {
-                DebrisPlacementManager.Instance.SetPlacementMode(false);
+                LeakPlacementManager.Instance.SetPlacementMode(false);
             }
 
             CreateIndicators();
-            Debug.Log("[LeakPlacementManager] Placement Mode ACTIVE - Hover over nodes/edges to place methane leak.");
+            Debug.Log("[DebrisPlacementManager] Placement Mode ACTIVE - Hover over tunnels/edges to place debris.");
         }
         else
         {
             DestroyIndicators();
             ResetCursor();
-            Debug.Log("[LeakPlacementManager] Placement Mode CANCELLED.");
+            Debug.Log("[DebrisPlacementManager] Placement Mode CANCELLED.");
         }
     }
 
@@ -157,7 +163,6 @@ public class LeakPlacementManager : MonoBehaviour
             // Ignore input on the frame placement mode was activated
             if (Time.frameCount == activatedFrame) return;
 
-            // Cancel placement on Escape or Right-Click
             if ((Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
                 (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame))
             {
@@ -176,17 +181,20 @@ public class LeakPlacementManager : MonoBehaviour
         Vector2 mousePos = Mouse.current.position.ReadValue();
         Ray ray = Camera.main.ScreenPointToRay(mousePos);
 
-        currentPlacementValid = GetClosestPointOnNetwork(ray, out Vector3 snappedPosition, out Node nearestNode, out Vector3 rawHitPosition);
+        currentPlacementValid = GetClosestPointOnEdge(ray, out Vector3 snappedPosition, out Edge targetEdge);
         currentSnappedPos = snappedPosition;
-        currentRawHitPos = rawHitPosition;
+        currentTargetEdge = targetEdge;
 
-        if (currentPlacementValid)
+        if (currentPlacementValid && targetEdge != null)
         {
-            // --- VALID PLACEMENT LOCATION ---
-            // 1. Reset mouse cursor to normal
             ResetCursor();
 
-            // 2. Position & show yellow transparent snap indicator
+            // Calculate edge orientation vector
+            Vector3 edgeDir = (targetEdge.nodeB.transform.position - targetEdge.nodeA.transform.position).normalized;
+            if (edgeDir.sqrMagnitude < 0.001f) edgeDir = Vector3.forward;
+            Quaternion rotation = Quaternion.LookRotation(edgeDir, Vector3.up);
+
+            // Position & show snap indicator
             Vector3 indicatorPos = snappedPosition + Vector3.up * verticalOffset;
             if (snapIndicator != null)
             {
@@ -195,42 +203,31 @@ public class LeakPlacementManager : MonoBehaviour
                 snapIndicator.transform.localScale = Vector3.one * indicatorRadius;
             }
 
-            // 3. Position & show ghost preview pointing UP
+            // Position & show preview object
             if (previewObject != null)
             {
                 previewObject.SetActive(true);
                 previewObject.transform.position = snappedPosition;
-                previewObject.transform.rotation = Quaternion.Euler(placementRotationEuler);
+                previewObject.transform.rotation = rotation;
             }
 
-            // Handle left click to place
+            // Place debris on left click
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
-                // Ensure we are not clicking over UI buttons
                 if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 {
                     return;
                 }
 
-                PlaceLeak(snappedPosition, nearestNode);
+                PlaceDebris(snappedPosition, targetEdge, rotation);
             }
         }
         else
         {
-            // --- INVALID PLACEMENT LOCATION ---
-            // 1. Change cursor to invalid / prohibition sprite
             SetInvalidCursor();
 
-            // 2. Hide ghost preview object and yellow snap indicator
-            if (previewObject != null)
-            {
-                previewObject.SetActive(false);
-            }
-
-            if (snapIndicator != null)
-            {
-                snapIndicator.SetActive(false);
-            }
+            if (previewObject != null) previewObject.SetActive(false);
+            if (snapIndicator != null) snapIndicator.SetActive(false);
         }
     }
 
@@ -257,20 +254,19 @@ public class LeakPlacementManager : MonoBehaviour
         ResetCursor();
     }
 
-    private bool GetClosestPointOnNetwork(Ray ray, out Vector3 snappedPoint, out Node nearestNode, out Vector3 rawHitPoint)
+    private bool GetClosestPointOnEdge(Ray ray, out Vector3 snappedPoint, out Edge targetEdge)
     {
         snappedPoint = Vector3.zero;
-        nearestNode = null;
-        rawHitPoint = Vector3.zero;
+        targetEdge = null;
 
         if (graphManager == null) graphManager = FindFirstObjectByType<GraphManager>();
-        if (graphManager == null || graphManager.nodes == null || graphManager.nodes.Count == 0)
+        if (graphManager == null || graphManager.edges == null || graphManager.edges.Count == 0)
         {
             return false;
         }
 
-        // Raycast against scene colliders first, then ground plane (Y=0)
         Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+        Vector3 rawHitPoint;
 
         if (Physics.Raycast(ray, out RaycastHit hit, 500f))
         {
@@ -288,21 +284,6 @@ public class LeakPlacementManager : MonoBehaviour
         float minDistanceSq = maxSnapDistance * maxSnapDistance;
         Vector3 bestPoint = rawHitPoint;
 
-        // 1. Check distance to Node centers
-        foreach (var node in graphManager.nodes)
-        {
-            if (node == null) continue;
-            Vector3 nodePos = node.transform.position;
-            float distSq = (nodePos - rawHitPoint).sqrMagnitude;
-            if (distSq < minDistanceSq)
-            {
-                minDistanceSq = distSq;
-                bestPoint = nodePos;
-                nearestNode = node;
-            }
-        }
-
-        // 2. Check distance to Edge line segments
         foreach (var edge in graphManager.edges)
         {
             if (edge == null || edge.nodeA == null || edge.nodeB == null) continue;
@@ -317,44 +298,17 @@ public class LeakPlacementManager : MonoBehaviour
             {
                 minDistanceSq = distSq;
                 bestPoint = closestOnSeg;
-
-                // Nearest node is whichever endpoint of the edge is closer to the snapped point
-                float distA = (posA - bestPoint).sqrMagnitude;
-                float distB = (posB - bestPoint).sqrMagnitude;
-                nearestNode = distA <= distB ? edge.nodeA : edge.nodeB;
+                targetEdge = edge;
             }
         }
 
-        if (minDistanceSq < maxSnapDistance * maxSnapDistance)
+        if (targetEdge != null && minDistanceSq < maxSnapDistance * maxSnapDistance)
         {
             snappedPoint = bestPoint;
-
-            if (nearestNode == null)
-            {
-                nearestNode = GetNearestNodeToPosition(bestPoint);
-            }
-
             return true;
         }
 
         return false;
-    }
-
-    private Node GetNearestNodeToPosition(Vector3 pos)
-    {
-        Node closest = null;
-        float minDistSq = float.MaxValue;
-        foreach (var n in graphManager.nodes)
-        {
-            if (n == null) continue;
-            float dSq = (n.transform.position - pos).sqrMagnitude;
-            if (dSq < minDistSq)
-            {
-                minDistSq = dSq;
-                closest = n;
-            }
-        }
-        return closest;
     }
 
     private Vector3 ClosestPointOnSegment(Vector3 p, Vector3 a, Vector3 b)
@@ -368,44 +322,50 @@ public class LeakPlacementManager : MonoBehaviour
         return a + t * ab;
     }
 
-    private void PlaceLeak(Vector3 position, Node node)
+    private void PlaceDebris(Vector3 position, Edge edge, Quaternion rotation)
     {
-        if (node == null) return;
+        if (edge == null) return;
 
-        Quaternion rotation = Quaternion.Euler(placementRotationEuler);
-        GameObject leakObj;
-
-        if (leakPrefab != null)
+        // If edge is already blocked, destroy existing debris instance before placing new one
+        if (edge.isBlocked && edge.debrisInstance != null)
         {
-            leakObj = Instantiate(leakPrefab, position, rotation);
+            Destroy(edge.debrisInstance);
+        }
+
+        GameObject debrisObj;
+
+        if (debrisPrefab != null)
+        {
+            debrisObj = Instantiate(debrisPrefab, position, rotation);
         }
         else
         {
-            // Fallback placeholder sphere if prefab not yet assigned
-            leakObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            leakObj.name = "MethaneLeak_Placeholder";
-            leakObj.transform.position = position;
-            leakObj.transform.rotation = rotation;
-            leakObj.transform.localScale = Vector3.one * 1.5f;
+            // Fallback object if prefab not found
+            debrisObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            debrisObj.name = "Debris_Placeholder";
+            debrisObj.transform.position = position;
+            debrisObj.transform.rotation = rotation;
+            debrisObj.transform.localScale = new Vector3(2f, 1.5f, 2f);
 
-            Renderer r = leakObj.GetComponent<Renderer>();
+            Renderer r = debrisObj.GetComponent<Renderer>();
             if (r != null)
             {
-                r.material = CreateTransparentMaterial(Color.yellow, false);
+                r.material = CreateTransparentMaterial(new Color(0.4f, 0.25f, 0.1f, 1f), false);
             }
         }
 
-        MethaneLeak leakComp = leakObj.GetComponent<MethaneLeak>();
-        if (leakComp == null)
+        debrisObj.transform.SetParent(graphManager.transform);
+
+        Debris debrisComp = debrisObj.GetComponent<Debris>();
+        if (debrisComp == null)
         {
-            leakComp = leakObj.AddComponent<MethaneLeak>();
+            debrisComp = debrisObj.AddComponent<Debris>();
         }
 
-        leakComp.Initialize(node, defaultEmissionRate);
+        debrisComp.Initialize(edge, position);
 
-        Debug.Log($"[LeakPlacementManager] Placed Methane Leak at {position}, affecting Node '{node.gameObject.name}' with +{defaultEmissionRate} m³/s methane rate.");
+        Debug.Log($"[DebrisPlacementManager] Placed Debris on Edge ({edge.nodeA.name} <-> {edge.nodeB.name}) at {position}.");
 
-        // Finish placement mode
         SetPlacementMode(false);
     }
 
@@ -413,20 +373,17 @@ public class LeakPlacementManager : MonoBehaviour
     {
         DestroyIndicators();
 
-        // 1. Create Ghost Preview Object (using leakPrefab or fallback)
-        if (leakPrefab != null)
+        if (debrisPrefab != null)
         {
-            previewObject = Instantiate(leakPrefab);
-            // Disable colliders on ghost preview
+            previewObject = Instantiate(debrisPrefab);
             foreach (var col in previewObject.GetComponentsInChildren<Collider>())
             {
                 col.enabled = false;
             }
         }
 
-        // 2. Create Yellow Transparent Snap Indicator Sphere
         snapIndicator = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        snapIndicator.name = "LeakPlacement_SnapIndicator";
+        snapIndicator.name = "DebrisPlacement_SnapIndicator";
         snapIndicator.transform.localScale = Vector3.one * indicatorRadius;
 
         Collider indicatorCol = snapIndicator.GetComponent<Collider>();
@@ -457,7 +414,7 @@ public class LeakPlacementManager : MonoBehaviour
 
         if (mat.HasProperty("_Mode"))
         {
-            mat.SetFloat("_Mode", 3); // Transparent mode
+            mat.SetFloat("_Mode", 3);
         }
 
         mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
@@ -467,7 +424,7 @@ public class LeakPlacementManager : MonoBehaviour
         if (alwaysOnTop)
         {
             mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
-            mat.renderQueue = 4000; // Overlay render queue
+            mat.renderQueue = 4000;
         }
 
         mat.DisableKeyword("_ALPHATEST_ON");
@@ -488,17 +445,6 @@ public class LeakPlacementManager : MonoBehaviour
         {
             Destroy(snapIndicator);
             snapIndicator = null;
-        }
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (!isPlacing) return;
-
-        if (currentPlacementValid)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(currentSnappedPos + Vector3.up * verticalOffset, indicatorRadius * 0.5f);
         }
     }
 }

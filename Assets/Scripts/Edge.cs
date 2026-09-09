@@ -13,6 +13,12 @@ public class Edge
     public FlowDir flowDirection = FlowDir.Static;
     [HideInInspector] public LineRenderer lineRenderer;
 
+    [Header("Debris / Blocking State")]
+    public bool isBlocked = false;
+    public GameObject debrisInstance;
+    public Vector3 debrisWorldPosition;
+    [HideInInspector] public LineRenderer downstreamLineRenderer;
+
     public Edge(Node a, Node b)
     {
         nodeA = a;

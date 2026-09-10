@@ -10,3 +10,7 @@ Clicking the airflow button in the UI hides them again.
 I want to add doors to some edges of the graph. When closed, they basically function as debris (infinite resistance). When open, the edge functions as normal.The Door.cs acts as a basic script. Build on it. I should be able to add the door by dragging and dropping into the graphmanager edge objects.
 There's a toggle door switch for each door. Its a 3D toggle switch that opens and closes the door when the player clicks on it. 
 When clicked on the toggle, it should turn to green if opened, red if closed. 
+
+The inlet fan speed should be controllable with a slider. The slider sets the text to the current speed. 
+
+Make any necessary changes to Door.cs or other scripts. But keep everything simple and minimal.

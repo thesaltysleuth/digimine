@@ -147,8 +147,8 @@ public static class Pathfinder
         if (edge == null || edge.nodeA == null || edge.nodeB == null)
             return float.PositiveInfinity;
 
-        // Blocked by debris -> impassable
-        if (edge.isBlocked)
+        // Blocked by debris or closed door -> impassable
+        if (edge.isBlocked || (edge.door != null && edge.door.doorState == Door.DoorState.Closed))
             return float.PositiveInfinity;
 
         float distance = Vector3.Distance(edge.nodeA.transform.position, edge.nodeB.transform.position);

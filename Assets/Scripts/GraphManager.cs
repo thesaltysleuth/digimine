@@ -36,6 +36,10 @@ public class GraphManager : MonoBehaviour
         {
             gameObject.AddComponent<NavigationPlacementManager>();
         }
+        if (GetComponent<AirflowPlacementManager>() == null)
+        {
+            gameObject.AddComponent<AirflowPlacementManager>();
+        }
     }
 
     private void Start()

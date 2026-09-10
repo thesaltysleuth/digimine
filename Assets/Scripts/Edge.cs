@@ -8,6 +8,7 @@ public class Edge
     public Node nodeA;
     public Node nodeB;
     public float resistance = 1.0f;
+    public Door door;
 
     public float calculatedFlowRate = 0f;
     public FlowDir flowDirection = FlowDir.Static;

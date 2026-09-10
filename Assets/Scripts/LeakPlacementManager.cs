@@ -12,9 +12,13 @@ public class LeakPlacementManager : MonoBehaviour
     public GameObject leakPrefab;
     public float defaultEmissionRate = 0.5f; // m³/s
 
-    [Header("Rotation Settings")]
+    [Header("Rotation & Transform Offset Settings")]
     [Tooltip("Rotation offset applied when spawning the leak. Default (-90, 0, 0) points local Z straight UP into world Y.")]
     public Vector3 placementRotationEuler = new Vector3(-90f, 0f, 0f);
+    [Tooltip("Position transform offset applied to the spawned/preview leak.")]
+    public Vector3 placementPositionOffset = Vector3.zero;
+    [Tooltip("If true, position offset is calculated in local object space (rotated with object) to fix off-center prefab pivots. If false, applied in world space.")]
+    public bool isLocalOffset = true;
 
     [Header("Placement State & Snapping")]
     public bool isPlacing = false;
@@ -196,11 +200,15 @@ public class LeakPlacementManager : MonoBehaviour
             }
 
             // 3. Position & show ghost preview pointing UP
+            Quaternion rotation = Quaternion.Euler(placementRotationEuler);
+            Vector3 offset = isLocalOffset ? (rotation * placementPositionOffset) : placementPositionOffset;
+            Vector3 targetPosition = snappedPosition + offset;
+
             if (previewObject != null)
             {
                 previewObject.SetActive(true);
-                previewObject.transform.position = snappedPosition;
-                previewObject.transform.rotation = Quaternion.Euler(placementRotationEuler);
+                previewObject.transform.position = targetPosition;
+                previewObject.transform.rotation = rotation;
             }
 
             // Handle left click to place
@@ -212,7 +220,7 @@ public class LeakPlacementManager : MonoBehaviour
                     return;
                 }
 
-                PlaceLeak(snappedPosition, nearestNode);
+                PlaceLeak(targetPosition, nearestNode);
             }
         }
         else

@@ -18,6 +18,7 @@ public class Node : MonoBehaviour
     [Header("Boundary Flags")]
     public bool isFixedPressure = false;
     public bool isFixedCh4 = false;
+    public bool isExit = false;
 
     [Header("UI Reference")]
     public TextMeshPro labelText; // Drag child TextMeshPro component here
@@ -67,7 +68,8 @@ public class Node : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = isFixedPressure ? Color.green : Color.cyan;
+        if (isExit) Gizmos.color = Color.yellow;
+        else Gizmos.color = isFixedPressure ? Color.green : Color.cyan;
         Gizmos.DrawSphere(transform.position, 0.5f);
     }
 }

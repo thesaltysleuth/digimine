@@ -12,6 +12,14 @@ public class DebrisPlacementManager : MonoBehaviour
     [Tooltip("Assign your Debris Prefab here (with or without Debris component attached).")]
     public GameObject debrisPrefab;
 
+    [Header("Rotation & Transform Offset Settings")]
+    [Tooltip("Rotation offset applied when spawning/previewing debris.")]
+    public Vector3 placementRotationEuler = Vector3.zero;
+    [Tooltip("Position transform offset applied to the spawned/preview debris.")]
+    public Vector3 placementPositionOffset = Vector3.zero;
+    [Tooltip("If true, position offset is calculated in local object space (rotated with object) to fix off-center prefab pivots. If false, applied in world space.")]
+    public bool isLocalOffset = true;
+
     [Header("Placement State & Snapping")]
     public bool isPlacing = false;
     [Tooltip("Maximum ground/world distance to snap to an edge line.")]
@@ -189,10 +197,13 @@ public class DebrisPlacementManager : MonoBehaviour
         {
             ResetCursor();
 
-            // Calculate edge orientation vector
+            // Calculate edge orientation vector + rotation offset
             Vector3 edgeDir = (targetEdge.nodeB.transform.position - targetEdge.nodeA.transform.position).normalized;
             if (edgeDir.sqrMagnitude < 0.001f) edgeDir = Vector3.forward;
-            Quaternion rotation = Quaternion.LookRotation(edgeDir, Vector3.up);
+            Quaternion baseRotation = Quaternion.LookRotation(edgeDir, Vector3.up);
+            Quaternion rotation = baseRotation * Quaternion.Euler(placementRotationEuler);
+            Vector3 offset = isLocalOffset ? (rotation * placementPositionOffset) : placementPositionOffset;
+            Vector3 targetPosition = snappedPosition + offset;
 
             // Position & show snap indicator
             Vector3 indicatorPos = snappedPosition + Vector3.up * verticalOffset;
@@ -207,7 +218,7 @@ public class DebrisPlacementManager : MonoBehaviour
             if (previewObject != null)
             {
                 previewObject.SetActive(true);
-                previewObject.transform.position = snappedPosition;
+                previewObject.transform.position = targetPosition;
                 previewObject.transform.rotation = rotation;
             }
 
@@ -219,7 +230,7 @@ public class DebrisPlacementManager : MonoBehaviour
                     return;
                 }
 
-                PlaceDebris(snappedPosition, targetEdge, rotation);
+                PlaceDebris(targetPosition, targetEdge, rotation);
             }
         }
         else

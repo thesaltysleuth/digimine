@@ -32,6 +32,10 @@ public class GraphManager : MonoBehaviour
         {
             gameObject.AddComponent<DebrisPlacementManager>();
         }
+        if (GetComponent<NavigationPlacementManager>() == null)
+        {
+            gameObject.AddComponent<NavigationPlacementManager>();
+        }
     }
 
     private void Start()

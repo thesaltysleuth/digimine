@@ -57,7 +57,7 @@ public class LeakPlacementManager : MonoBehaviour
 
     private void Start()
     {
-        graphManager = FindFirstObjectByType<GraphManager>();
+        graphManager = FindAnyObjectByType<GraphManager>();
 
         AutoFindProhibitionTexture();
 
@@ -263,7 +263,7 @@ public class LeakPlacementManager : MonoBehaviour
         nearestNode = null;
         rawHitPoint = Vector3.zero;
 
-        if (graphManager == null) graphManager = FindFirstObjectByType<GraphManager>();
+        if (graphManager == null) graphManager = FindAnyObjectByType<GraphManager>();
         if (graphManager == null || graphManager.nodes == null || graphManager.nodes.Count == 0)
         {
             return false;
@@ -287,6 +287,7 @@ public class LeakPlacementManager : MonoBehaviour
 
         float minDistanceSq = maxSnapDistance * maxSnapDistance;
         Vector3 bestPoint = rawHitPoint;
+        bool snappedToEdge = false;
 
         // 1. Check distance to Node centers
         foreach (var node in graphManager.nodes)
@@ -317,11 +318,24 @@ public class LeakPlacementManager : MonoBehaviour
             {
                 minDistanceSq = distSq;
                 bestPoint = closestOnSeg;
+                snappedToEdge = true;
 
-                // Nearest node is whichever endpoint of the edge is closer to the snapped point
-                float distA = (posA - bestPoint).sqrMagnitude;
-                float distB = (posB - bestPoint).sqrMagnitude;
-                nearestNode = distA <= distB ? edge.nodeA : edge.nodeB;
+                // The first node to detect a leak is the downstream endpoint.
+                switch (edge.flowDirection)
+                {
+                    case FlowDir.A_To_B:
+                        nearestNode = edge.nodeB;
+                        break;
+
+                    case FlowDir.B_To_A:
+                        nearestNode = edge.nodeA;
+                        break;
+
+                    case FlowDir.Static:
+                    default:
+                        nearestNode = null;
+                        break;
+                }
             }
         }
 
@@ -329,7 +343,7 @@ public class LeakPlacementManager : MonoBehaviour
         {
             snappedPoint = bestPoint;
 
-            if (nearestNode == null)
+            if (nearestNode == null && !snappedToEdge)
             {
                 nearestNode = GetNearestNodeToPosition(bestPoint);
             }

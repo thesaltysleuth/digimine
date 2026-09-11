@@ -160,16 +160,16 @@ public class GraphManager : MonoBehaviour
                     Node upstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeA : edge.nodeB;
                     Node downstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeB : edge.nodeA;
                     //Debug.Log($"[GraphManager] Edge {edge.nodeA.name} -> {edge.nodeB.name}, FlowDir: {edge.flowDirection}, Upstream Node: {upstreamNode.name}, CH4: {upstreamNode.ch4}");
-                    float upstreamCh4 = upstreamNode.ch4;
+                    float downstreamCh4 = downstreamNode.ch4;
                     Texture targetTex = greenArrow;
                     bool isleak = false;
-                    if (downstreamNode.methaneGenerationRate > 0f)
+                    if (edge.nodeA.methaneGenerationRate > 0f || edge.nodeB.methaneGenerationRate > 0f)
                     {
                         isleak = true;
                     }
                     edge.isLeak = isleak;
-                    if (upstreamCh4 > 1.25f) targetTex = redArrow;
-                    else if (upstreamCh4 >= 0.75f) targetTex = yellowArrow;
+                    if (downstreamCh4 > 1.25f) targetTex = redArrow;
+                    else if (downstreamCh4 >= 0.75f) targetTex = yellowArrow;
 
                     if (lr.sharedMaterial == null || lr.sharedMaterial == staticBlockedMaterial)
                     {
@@ -320,9 +320,18 @@ public class GraphManager : MonoBehaviour
             // Faint orange pulse overlay for leak edges
             if (edge.isLeak && edge.leakGlowRenderer != null)
             {
-                float t = (Mathf.Sin(Time.time * 3f) + 1f) * 0.5f; // 0..1 oscillation
-                float alpha = Mathf.Lerp(0.08f, 0.4f, t);
-                Color glowColor = new Color(1f, 0.5f, 0f, alpha);
+                    Node upstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeA : edge.nodeB;
+                    Node downstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeB : edge.nodeA;
+                    float downstreamCh4 = downstreamNode.ch4;
+                    float t = (Mathf.Sin(Time.time * 3f) + 1f) * 0.5f; // 0..1 oscillation
+                    float alpha = Mathf.Lerp(0.08f, 0.4f, t);
+                    Color glowColor = new Color(1f, 1f, 0f, alpha*0.6f);
+            
+                    if (downstreamCh4 > 1.5f) glowColor = new Color(1f, 0f, 0f, alpha*3f);
+                    else if (downstreamCh4 >= 1.20f) glowColor = new Color(1f, 0f, 0f, alpha*2f);
+                    else if (downstreamCh4 >= 0.75f) glowColor = new Color(1f, 1f, 0f, alpha*1.5f);
+                
+                
                 edge.leakGlowRenderer.startColor = glowColor;
                 edge.leakGlowRenderer.endColor = glowColor;
             }

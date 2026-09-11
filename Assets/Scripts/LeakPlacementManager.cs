@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -265,13 +266,13 @@ public class LeakPlacementManager : MonoBehaviour
         ResetCursor();
     }
 
-    private bool GetClosestPointOnNetwork(Ray ray, out Vector3 snappedPoint, out Node nearestNode, out Vector3 rawHitPoint)
+     private bool GetClosestPointOnNetwork(Ray ray, out Vector3 snappedPoint, out Node nearestNode, out Vector3 rawHitPoint)
     {
         snappedPoint = Vector3.zero;
         nearestNode = null;
         rawHitPoint = Vector3.zero;
 
-        if (graphManager == null) graphManager = FindFirstObjectByType<GraphManager>();
+        if (graphManager == null) graphManager = FindAnyObjectByType<GraphManager>();
         if (graphManager == null || graphManager.nodes == null || graphManager.nodes.Count == 0)
         {
             return false;
@@ -295,6 +296,7 @@ public class LeakPlacementManager : MonoBehaviour
 
         float minDistanceSq = maxSnapDistance * maxSnapDistance;
         Vector3 bestPoint = rawHitPoint;
+        bool snappedToEdge = false;
 
         // 1. Check distance to Node centers
         foreach (var node in graphManager.nodes)
@@ -325,19 +327,33 @@ public class LeakPlacementManager : MonoBehaviour
             {
                 minDistanceSq = distSq;
                 bestPoint = closestOnSeg;
+                snappedToEdge = true;
 
-                // Nearest node is whichever endpoint of the edge is closer to the snapped point
-                float distA = (posA - bestPoint).sqrMagnitude;
-                float distB = (posB - bestPoint).sqrMagnitude;
-                nearestNode = distA <= distB ? edge.nodeA : edge.nodeB;
+                // The first node to detect a leak is the downstream endpoint.
+                switch (edge.flowDirection)
+                {
+                    case FlowDir.A_To_B:
+                        nearestNode = edge.nodeB;
+                        break;
+
+                    case FlowDir.B_To_A:
+                        nearestNode = edge.nodeA;
+                        break;
+
+                    case FlowDir.Static:
+                    default:
+                        nearestNode = null;
+                        break;
+                }
             }
         }
+        //Debug.Log($"[LeakPlacementManager] Closest point found at {bestPoint}, distance squared: {minDistanceSq}, snappedToEdge: {snappedToEdge}, nearestNode: {(nearestNode != null ? nearestNode.gameObject.name : "null")}");
 
         if (minDistanceSq < maxSnapDistance * maxSnapDistance)
         {
             snappedPoint = bestPoint;
 
-            if (nearestNode == null)
+            if (nearestNode == null && !snappedToEdge)
             {
                 nearestNode = GetNearestNodeToPosition(bestPoint);
             }
@@ -347,8 +363,7 @@ public class LeakPlacementManager : MonoBehaviour
 
         return false;
     }
-
-    private Node GetNearestNodeToPosition(Vector3 pos)
+       private Node GetNearestNodeToPosition(Vector3 pos)
     {
         Node closest = null;
         float minDistSq = float.MaxValue;

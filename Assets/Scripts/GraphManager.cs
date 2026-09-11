@@ -20,6 +20,7 @@ public class GraphManager : MonoBehaviour
 
     private Solver solver;
     private Material staticBlockedMaterial;
+    private Material leakGlowMaterial;
 
     private void Awake()
     {
@@ -89,9 +90,31 @@ public class GraphManager : MonoBehaviour
         }
     }
 
+    private void EnsureLeakGlowMaterial()
+    {
+        if (leakGlowMaterial == null)
+        {
+            leakGlowMaterial = new Material(Shader.Find("Sprites/Default"));
+            leakGlowMaterial.color = new Color(1f, 0.5f, 0f, 0.35f);
+        }
+    }
+
+    private void DestroyLeakGlow(Edge edge)
+    {
+        if (edge.leakGlowRenderer != null)
+        {
+            if (Application.isPlaying)
+                Destroy(edge.leakGlowRenderer.gameObject);
+            else
+                DestroyImmediate(edge.leakGlowRenderer.gameObject);
+            edge.leakGlowRenderer = null;
+        }
+    }
+
     private void SetupEdgeRenderers()
     {
         EnsureStaticBlockedMaterial();
+        EnsureLeakGlowMaterial();
 
         foreach (var edge in edges)
         {
@@ -134,14 +157,23 @@ public class GraphManager : MonoBehaviour
                 if (hasFlow)
                 {
                     // Determine target texture based on methane levels
-                    float maxCh4 = Mathf.Max(edge.nodeA.ch4, edge.nodeB.ch4);
+                    Node upstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeA : edge.nodeB;
+                    Node downstreamNode = edge.flowDirection == FlowDir.A_To_B ? edge.nodeB : edge.nodeA;
+                    //Debug.Log($"[GraphManager] Edge {edge.nodeA.name} -> {edge.nodeB.name}, FlowDir: {edge.flowDirection}, Upstream Node: {upstreamNode.name}, CH4: {upstreamNode.ch4}");
+                    float upstreamCh4 = upstreamNode.ch4;
                     Texture targetTex = greenArrow;
-                    if (maxCh4 > 1.25f) targetTex = redArrow;
-                    else if (maxCh4 >= 0.75f) targetTex = yellowArrow;
+                    bool isleak = false;
+                    if (downstreamNode.methaneGenerationRate > 0f)
+                    {
+                        isleak = true;
+                    }
+                    edge.isLeak = isleak;
+                    if (upstreamCh4 > 1.25f) targetTex = redArrow;
+                    else if (upstreamCh4 >= 0.75f) targetTex = yellowArrow;
 
                     if (lr.sharedMaterial == null || lr.sharedMaterial == staticBlockedMaterial)
                     {
-                        lr.sharedMaterial = new Material(Shader.Find("Unlit/Transparent"));
+                        lr.sharedMaterial = new Material(Shader.Find("Sprites/Default"));
                     }
 
                     lr.sharedMaterial.mainTexture = targetTex;
@@ -157,10 +189,36 @@ public class GraphManager : MonoBehaviour
                     }
 
                     lr.sharedMaterial.mainTextureScale = new Vector2(tilingX, 1);
+
+                    // Create or destroy leak glow overlay
+                    if (isleak)
+                    {
+                        if (edge.leakGlowRenderer == null)
+                        {
+                            GameObject glowObj = new GameObject($"LeakGlow_{edge.nodeA.name}_{edge.nodeB.name}");
+                            glowObj.transform.SetParent(transform);
+                            edge.leakGlowRenderer = glowObj.AddComponent<LineRenderer>();
+                            edge.leakGlowRenderer.sharedMaterial = leakGlowMaterial;
+                            edge.leakGlowRenderer.numCapVertices = 4;
+                        }
+                        edge.leakGlowRenderer.enabled = showEdges;
+                        edge.leakGlowRenderer.startWidth = lineThickness * 2.5f;
+                        edge.leakGlowRenderer.endWidth = lineThickness * 2.5f;
+                        edge.leakGlowRenderer.positionCount = 2;
+                        edge.leakGlowRenderer.SetPosition(0, edge.nodeA.transform.position);
+                        edge.leakGlowRenderer.SetPosition(1, edge.nodeB.transform.position);
+                        edge.leakGlowRenderer.sortingOrder = -1;
+                    }
+                    else
+                    {
+                        DestroyLeakGlow(edge);
+                    }
                 }
                 else
                 {
                     // 0 airflow: hide arrows, show static grey line
+                    edge.isLeak = false;
+                    DestroyLeakGlow(edge);
                     lr.sharedMaterial = staticBlockedMaterial;
                 }
             }
@@ -197,7 +255,7 @@ public class GraphManager : MonoBehaviour
 
                     if (upstreamLr.sharedMaterial == null || upstreamLr.sharedMaterial == staticBlockedMaterial)
                     {
-                        upstreamLr.sharedMaterial = new Material(Shader.Find("Unlit/Transparent"));
+                        upstreamLr.sharedMaterial = new Material(Shader.Find("Sprites/Default"));
                     }
 
                     upstreamLr.sharedMaterial.mainTexture = targetTex;
@@ -258,6 +316,16 @@ public class GraphManager : MonoBehaviour
             Vector2 currentOffset = edge.lineRenderer.sharedMaterial.mainTextureOffset;
             currentOffset.x -= speed * Time.deltaTime;
             edge.lineRenderer.sharedMaterial.mainTextureOffset = currentOffset;
+
+            // Faint orange pulse overlay for leak edges
+            if (edge.isLeak && edge.leakGlowRenderer != null)
+            {
+                float t = (Mathf.Sin(Time.time * 3f) + 1f) * 0.5f; // 0..1 oscillation
+                float alpha = Mathf.Lerp(0.08f, 0.4f, t);
+                Color glowColor = new Color(1f, 0.5f, 0f, alpha);
+                edge.leakGlowRenderer.startColor = glowColor;
+                edge.leakGlowRenderer.endColor = glowColor;
+            }
         }
     }
 

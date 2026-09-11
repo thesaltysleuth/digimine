@@ -19,6 +19,8 @@ public class Edge
     public GameObject debrisInstance;
     public Vector3 debrisWorldPosition;
     [HideInInspector] public LineRenderer downstreamLineRenderer;
+    [HideInInspector] public bool isLeak = false;
+    [HideInInspector] public LineRenderer leakGlowRenderer;
 
     public Edge(Node a, Node b)
     {

@@ -163,7 +163,7 @@ public class GraphManager : MonoBehaviour
                     float downstreamCh4 = downstreamNode.ch4;
                     Texture targetTex = greenArrow;
                     bool isleak = false;
-                    if (edge.nodeA.methaneGenerationRate > 0f || edge.nodeB.methaneGenerationRate > 0f)
+                    if (edge.nodeA.ch4 > 0.1f || edge.nodeB.ch4 > 0.1f)
                     {
                         isleak = true;
                     }
@@ -325,11 +325,13 @@ public class GraphManager : MonoBehaviour
                     float downstreamCh4 = downstreamNode.ch4;
                     float t = (Mathf.Sin(Time.time * 3f) + 1f) * 0.5f; // 0..1 oscillation
                     float alpha = Mathf.Lerp(0.08f, 0.4f, t);
-                    Color glowColor = new Color(1f, 1f, 0f, alpha*0.6f);
+                    float alpha2 = Mathf.Lerp(0.08f, 0.4f, t*2);
+                    float alpha3 = Mathf.Lerp(0.08f, 0.4f, t*3);
+                    Color glowColor = new Color(0.5f, 0f, 1f, alpha*0.6f);
             
-                    if (downstreamCh4 > 1.5f) glowColor = new Color(1f, 0f, 0f, alpha*3f);
-                    else if (downstreamCh4 >= 1.20f) glowColor = new Color(1f, 0f, 0f, alpha*2f);
-                    else if (downstreamCh4 >= 0.75f) glowColor = new Color(1f, 1f, 0f, alpha*1.5f);
+                    if (downstreamCh4 > 1.5f) glowColor = new Color(1f, 0f, 0f, alpha3*3f);
+                    else if (downstreamCh4 >= 1.20f) glowColor = new Color(1f, 0f, 0f, alpha2*2f);
+                    else if (downstreamCh4 >= 0.75f) glowColor = new Color(1f, 1f, 0f, alpha2*1.5f);
                 
                 
                 edge.leakGlowRenderer.startColor = glowColor;

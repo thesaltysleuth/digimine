@@ -14,6 +14,11 @@ public class GraphManager : MonoBehaviour
     public Texture yellowArrow;
     public Texture redArrow;
 
+    [Header("Global UI Controls")]
+    [Tooltip("UI button that toggles all node info panels (auto-detected if null).")]
+    public UnityEngine.UI.Button showInfoButton;
+    public bool areAllNodeInfosVisible = false;
+
     [Header("Network Structure")]
     public List<Node> nodes = new List<Node>();
     public List<Edge> edges = new List<Edge>();
@@ -44,7 +49,63 @@ public class GraphManager : MonoBehaviour
 
     private void Start()
     {
+        AutoFindShowInfoButton();
         RunSolverAndRender();
+    }
+
+    private void AutoFindShowInfoButton()
+    {
+        if (showInfoButton != null)
+        {
+            showInfoButton.onClick.RemoveListener(ToggleAllNodeInfo);
+            showInfoButton.onClick.AddListener(ToggleAllNodeInfo);
+            return;
+        }
+
+        string[] names = { "Show info", "Show Info", "show info", "ShowInfo", "showinfo", "All nodes" };
+        foreach (var n in names)
+        {
+            GameObject found = GameObject.Find(n);
+            if (found != null && found.GetComponent<RectTransform>() != null)
+            {
+                showInfoButton = found.GetComponent<UnityEngine.UI.Button>() ?? found.AddComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Graphic g = found.GetComponent<UnityEngine.UI.Graphic>();
+                if (g != null) g.raycastTarget = true;
+                break;
+            }
+        }
+
+        if (showInfoButton != null)
+        {
+            showInfoButton.onClick.RemoveListener(ToggleAllNodeInfo);
+            showInfoButton.onClick.AddListener(ToggleAllNodeInfo);
+            Debug.Log("[GraphManager] Bound to Show Info UI Button: " + showInfoButton.name);
+        }
+    }
+
+    [ContextMenu("Toggle All Node Info")]
+    public void ToggleAllNodeInfo()
+    {
+        // If any node is hidden, show all; otherwise hide all
+        bool anyHidden = false;
+        foreach (var node in nodes)
+        {
+            if (node != null && !node.isInfoVisible)
+            {
+                anyHidden = true;
+                break;
+            }
+        }
+
+        bool targetState = anyHidden;
+        foreach (var node in nodes)
+        {
+            if (node != null)
+            {
+                node.SetInfoVisible(targetState);
+            }
+        }
+        areAllNodeInfosVisible = targetState;
     }
 
     private void Update()

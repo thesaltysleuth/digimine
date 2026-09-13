@@ -247,6 +247,10 @@ public class CameraController : MonoBehaviour
 
     private void OnNodeSelected(Node node)
     {
+        if (node != null)
+        {
+            node.ToggleInfo();
+        }
         Debug.Log($"Selected Node: {node.gameObject.name} | Pressure: {node.pressure} Pa | CH4: {node.ch4}%");
     }
 }

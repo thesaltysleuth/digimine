@@ -15,6 +15,7 @@
 /[Tt]emp/
 /[Oo]bj/
 /[Bb]uild/
+!/Build/
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/

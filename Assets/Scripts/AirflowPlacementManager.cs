@@ -21,6 +21,12 @@ public class AirflowPlacementManager : MonoBehaviour
     [Tooltip("3D TextMeshPro displaying current fan speed / pressure.")]
     public TextMeshPro fanSpeedText;
 
+    [Tooltip("Unit label displayed for fan value (e.g. 'Pa', 'RPM', 'm/s').")]
+    public string fanSpeedUnit = "Pa";
+
+    [Tooltip("3D Fan Controller model whose rotation speed depends on fan speed.")]
+    public FanController fanController;
+
     [Tooltip("Target inlet Node whose pressure is controlled by the fan slider (auto-detects Node_start if null).")]
     public Node inletNode;
 
@@ -54,6 +60,7 @@ public class AirflowPlacementManager : MonoBehaviour
             fanSlider.onValueChanged.RemoveListener(OnFanSliderValueChanged);
             fanSlider.onValueChanged.AddListener(OnFanSliderValueChanged);
             UpdateSpeedText(fanSlider.value);
+            if (fanController != null) fanController.SetFanSpeed(fanSlider.value);
         }
 
         SetControllersActive(isControllersActive);
@@ -137,6 +144,16 @@ public class AirflowPlacementManager : MonoBehaviour
                     }
                 }
             }
+
+            if (fanController == null)
+            {
+                fanController = airflowControllersRoot.GetComponentInChildren<FanController>(true);
+            }
+        }
+
+        if (fanController == null)
+        {
+            fanController = FindFirstObjectByType<FanController>();
         }
     }
 
@@ -253,6 +270,8 @@ public class AirflowPlacementManager : MonoBehaviour
         }
 
         UpdateSpeedText(value);
+        if (fanController != null)
+            fanController.SetFanSpeed(value);
 
         if (graphManager == null) graphManager = FindFirstObjectByType<GraphManager>();
         if (graphManager != null) graphManager.RunSolverAndRender();
@@ -261,6 +280,6 @@ public class AirflowPlacementManager : MonoBehaviour
     private void UpdateSpeedText(float value)
     {
         if (fanSpeedText != null)
-            fanSpeedText.text = $"{value:F1} m³/s";
+            fanSpeedText.text = $"{value:F1} {fanSpeedUnit}";
     }
 }

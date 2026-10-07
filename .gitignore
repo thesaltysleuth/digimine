@@ -19,6 +19,9 @@
 *.log
 README.md
 /Assets/data/methane_data.csv
+/generate_finale_deck.py 
+/DigiMine_Finale_Presentation.pptx
+/DigiMine_Finale_Pitch_Notes.md
 
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be committed to version control.
 *.blend1

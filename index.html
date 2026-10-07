@@ -6,13 +6,6 @@
     <title>Unity Web Player | digimine</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-      #unity-container { width: 100%; height: 100%; }
-      #unity-canvas { width: 100% !important; height: 100% !important; display: block; }
-      #unity-footer { position: fixed; bottom: 0; right: 0; }
-    </style>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -59,12 +52,12 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/Build.loader.js";
+      var loaderUrl = buildUrl + "/Builds.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/Build.data.unityweb",
-        frameworkUrl: buildUrl + "/Build.framework.js.unityweb",
-        codeUrl: buildUrl + "/Build.wasm.unityweb",
+        dataUrl: buildUrl + "/Builds.data",
+        frameworkUrl: buildUrl + "/Builds.framework.js",
+        codeUrl: buildUrl + "/Builds.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "rooklabs",
         productName: "digimine",
@@ -110,9 +103,9 @@
 
 
       } else {
-        // Desktop style: fill the full browser tab viewport
-        canvas.style.width = "100vw";
-        canvas.style.height = "100vh";
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
